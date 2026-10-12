@@ -100,7 +100,7 @@ if [[ -e "$SUBMISSION_ARCHIVE" || -e "$UPDATE_ARCHIVE" || -e "$FINAL_ARCHIVE" ]]
 fi
 
 echo "Submitting Nook $VERSION ($BUILD) to Apple notarization..."
-/usr/bin/ditto -c -k --keepParent "$APP_PATH" "$SUBMISSION_ARCHIVE"
+/usr/bin/ditto -c -k --norsrc --noextattr --noacl --keepParent "$APP_PATH" "$SUBMISSION_ARCHIVE"
 xcrun notarytool submit "$SUBMISSION_ARCHIVE" \
   --keychain-profile "$NOTARY_PROFILE" \
   --wait
@@ -110,7 +110,8 @@ xcrun stapler validate "$APP_PATH"
 ./Scripts/verify-release-app.sh "$APP_PATH"
 /usr/sbin/spctl --assess --type execute --verbose=4 "$APP_PATH"
 
-/usr/bin/ditto -c -k --keepParent "$APP_PATH" "$UPDATE_ARCHIVE"
+/usr/bin/ditto -c -k --norsrc --noextattr --noacl --keepParent "$APP_PATH" "$UPDATE_ARCHIVE"
+./Scripts/verify-release-archive.sh "$UPDATE_ARCHIVE"
 /usr/bin/ditto "$UPDATE_ARCHIVE" "$FINAL_ARCHIVE"
 /bin/rm -f "$STABLE_ARCHIVE"
 /usr/bin/ditto "$UPDATE_ARCHIVE" "$STABLE_ARCHIVE"
