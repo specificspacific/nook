@@ -280,6 +280,12 @@ The pinned `sign_update` supports `--verify <archive> <signature>` and
 verification mode still accesses the configured Keychain key. Do not edit XML
 or release notes after signing.
 
+Every release zip is written with `ditto --norsrc --noextattr --noacl` and
+checked by `Scripts/verify-release-archive.sh`, which rejects `._*`,
+`__MACOSX` and `.DS_Store` entries, extracts with plain `unzip`, adds a browser
+quarantine flag and requires strict `codesign` and `spctl` to pass. Run it on
+any archive before upload, including archives repacked by hand.
+
 Record SHA-256 and byte length for the prepared appcast, update archive, all
 deltas, and `build/distribution/Nook.zip`. The stable alias, versioned update
 ZIP and `Nook-<version>-notarized.zip` must contain the same finalized archive

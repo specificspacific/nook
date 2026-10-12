@@ -6,6 +6,11 @@ the [binary releases repository](https://github.com/wrnsnng/nook-releases/releas
 
 ## Unreleased
 
+- Release downloads no longer carry Finder metadata files. Apps unpacked by
+  tools other than Archive Utility, including many managed-Mac installers,
+  failed signature checks inside Sparkle.framework and Gatekeeper refused to
+  open them.
+
 ## 1.23.0
 
 [Release notes](Releases/Nook-1.23.0.md)
