@@ -296,6 +296,10 @@ final class MeetingCoordinator: ObservableObject {
     private var liveSummaryForceRequested = false
     private var lastStallCheckAt = Date.distantPast
     private var pendingStartRequest: PendingStartRequest?
+    /// Only a recording started from a detection ends when that detection
+    /// does. Manual and calendar recordings outlive whatever the detector
+    /// sees, such as a Slack video that plays and stops mid-meeting.
+    private var recordingEndsWithDetection = false
     private var accumulatedElapsed: TimeInterval = 0
     private var activeElapsedStartedAt: Date?
     private var processingCancellationRequested = false
@@ -351,7 +355,11 @@ final class MeetingCoordinator: ObservableObject {
 
     func startDetectedMeeting() {
         guard case .detected(let detection) = phase else { return }
-        startRecording(title: detection.suggestedTitle, sourceApp: detection.appName)
+        startRecording(
+            title: detection.suggestedTitle,
+            sourceApp: detection.appName,
+            endsWithDetection: true
+        )
     }
 
     func startManualMeeting() {
@@ -918,6 +926,7 @@ final class MeetingCoordinator: ObservableObject {
     private func handleMeetingEnded() {
         dismissedDetection = nil
         if phase.isRecording {
+            guard recordingEndsWithDetection else { return }
             stopRecording()
         } else if case .detected = phase {
             phase = .idle
@@ -927,7 +936,8 @@ final class MeetingCoordinator: ObservableObject {
     private func startRecording(
         title: String,
         sourceApp: String,
-        attaching attachment: LibraryNoteIdentity? = nil
+        attaching attachment: LibraryNoteIdentity? = nil,
+        endsWithDetection: Bool = false
     ) {
         guard activeDraft == nil, processingTask == nil else { return }
         if let attachment {
@@ -942,8 +952,10 @@ final class MeetingCoordinator: ObservableObject {
         pendingStartRequest = PendingStartRequest(
             title: title,
             sourceApp: sourceApp,
-            attachment: attachment
+            attachment: attachment,
+            endsWithDetection: endsWithDetection
         )
+        recordingEndsWithDetection = endsWithDetection
         activeAttachmentIdentity = attachment
         let attachedNoteID = attachment?.noteID
         requiredPermission = nil
@@ -1048,7 +1060,8 @@ final class MeetingCoordinator: ObservableObject {
         startRecording(
             title: request.title,
             sourceApp: request.sourceApp,
-            attaching: request.attachment
+            attaching: request.attachment,
+            endsWithDetection: request.endsWithDetection
         )
     }
 
@@ -2706,6 +2719,7 @@ private struct PendingStartRequest {
     let title: String
     let sourceApp: String
     let attachment: LibraryNoteIdentity?
+    let endsWithDetection: Bool
 }
 
 private enum PermissionResumeKey {
