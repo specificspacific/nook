@@ -222,7 +222,26 @@ struct SettingsView: View {
                         if enabled, !TextInsertionService.isTrusted {
                             TextInsertionService.requestTrust()
                         }
+                        accessibilityGranted = TextInsertionService.isTrusted
                     }
+                // Without access the setting reads nothing, so say so
+                // here rather than leave a meeting to come back unnamed.
+                if separateSpeakers, nameSpeakersFromZoom, !accessibilityGranted {
+                    HStack(alignment: .firstTextBaseline, spacing: NookSpacing.medium) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundStyle(NookPalette.warning)
+                            .accessibilityHidden(true)
+                        Text("Nook needs Accessibility access to read names from Zoom. Allow it in System Settings, then come back to Nook.")
+                            .font(NookType.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        Button("Allow…") {
+                            TextInsertionService.requestTrust()
+                            TextInsertionService.openAccessibilitySettings()
+                        }
+                    }
+                }
             } header: {
                 Text("Transcription")
             } footer: {
@@ -233,6 +252,15 @@ struct SettingsView: View {
             storageSection
         }
         .formStyle(.grouped)
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: NSApplication.didBecomeActiveNotification
+            )
+        ) { _ in
+            // The grant happens in System Settings, so coming back to Nook is
+            // the moment to re-check it.
+            accessibilityGranted = TextInsertionService.isTrusted
+        }
         .onDisappear {
             AppModel.shared.stopAudioInputCheck()
         }

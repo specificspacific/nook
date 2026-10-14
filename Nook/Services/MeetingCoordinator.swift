@@ -1161,10 +1161,15 @@ final class MeetingCoordinator: ObservableObject {
     /// model refusal or a timeout never leaves the transcript stranded in a
     /// temporary processing state.
     /// Names worth offering for a note's speakers, the user's own excluded.
-    static func participantNames(roster: MeetingRoster, invitees: [String]) -> [String] {
+    static func participantNames(
+        roster: MeetingRoster,
+        invitees: [String],
+        userNames: Set<String> = []
+    ) -> [String] {
+        let user = Set(userNames.union([roster.selfName].compactMap { $0 }).map { $0.lowercased() })
         var names: [String] = []
         for name in (roster.participants + invitees).compactMap(SpeakerNames.sanitized) {
-            guard name.lowercased() != roster.selfName?.lowercased(),
+            guard !user.contains(name.lowercased()),
                   !names.contains(where: { $0.lowercased() == name.lowercased() })
             else { continue }
             names.append(name)
@@ -1380,7 +1385,9 @@ final class MeetingCoordinator: ObservableObject {
                 try Task.checkCancellation()
                 // Names from the meeting app, only where its active-speaker
                 // highlight clearly matches one separated voice.
-                transcript = SpeakerNameMatching.named(transcript, roster: recordedRoster)
+                let named = SpeakerNameMatching.named(transcript, roster: recordedRoster)
+                if named != transcript { NookEventLog.write(.speakersNamedFromZoom) }
+                transcript = named
             }
 
             // A recording started from an existing note joins that note
@@ -1417,7 +1424,8 @@ final class MeetingCoordinator: ObservableObject {
                 forMeetingFrom: draft.startedAt, to: endedAt
             ) ?? []
             scaffold.participants = Self.participantNames(
-                roster: recordedRoster, invitees: invitees
+                roster: recordedRoster, invitees: invitees,
+                userNames: SpeakerNameMatching.likelyUserNames(in: transcript, roster: recordedRoster)
             )
             recordedRoster = MeetingRoster()
             let savedScaffold = try store.save(scaffold)

@@ -161,4 +161,21 @@ struct SpeakerNameMatchingTests {
         )
         #expect(names == ["Ana Ruiz", "Ben Ode"])
     }
+
+    /// With Zoom's panel closed nothing marks the user, so a name Zoom showed
+    /// speaking while the microphone carried the speech is not offered.
+    @MainActor
+    @Test
+    func theUserIsNotOfferedEvenWhenZoomDidNotMarkThem() {
+        let transcript = [line(0, 6, source: .microphone), line(6, 6, "Speaker 1")]
+        let roster = MeetingRoster(
+            participants: ["Jo Kay", "Ana Ruiz"],
+            activeSpeakers: highlighted("Jo Kay", from: 0, to: 6) + highlighted("Ana Ruiz", from: 6, to: 12)
+        )
+        let names = MeetingCoordinator.participantNames(
+            roster: roster, invitees: [],
+            userNames: SpeakerNameMatching.likelyUserNames(in: transcript, roster: roster)
+        )
+        #expect(names == ["Ana Ruiz"])
+    }
 }

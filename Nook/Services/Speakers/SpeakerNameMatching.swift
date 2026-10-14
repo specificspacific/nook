@@ -153,6 +153,20 @@ enum SpeakerNameMatching {
         return spans
     }
 
+    /// Names that are the user's, by the app's own marking or by behaviour.
+    /// Zoom only marks "(me)" while its participants panel is open, so the
+    /// behaviour is what catches the user the rest of the time.
+    static func likelyUserNames(
+        in transcript: [TranscriptSegment],
+        roster: MeetingRoster
+    ) -> Set<String> {
+        excludedNames(
+            transcript: transcript,
+            spans: highlightSpans(roster.activeSpeakers),
+            selfName: roster.selfName
+        )
+    }
+
     /// The user's own name never goes to a meeting-side voice. Apps mark it
     /// unreliably, so it is also recognised by behaviour: a name highlighted
     /// mostly while the microphone carried speech is the user's.

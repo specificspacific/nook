@@ -29,7 +29,10 @@ final class MeetingRosterRecorder {
     private var task: Task<Void, Never>?
     private let read: @Sendable () -> ZoomMeetingReading?
     private let isEnabled: () -> Bool
+    private let isPermitted: () -> Bool
     private let interval: Duration
+    /// Whether this recording read Zoom at all. Kept for the event log.
+    private(set) var isActive = false
 
     init(
         read: @escaping @Sendable () -> ZoomMeetingReading? = { ZoomAccessibilityReader.readMeeting() },
@@ -38,10 +41,12 @@ final class MeetingRosterRecorder {
         isEnabled: @escaping () -> Bool = {
             ZoomSpeakerNamesPreference.isEnabled() && SpeakerSeparationPreference.isEnabled()
         },
+        isPermitted: @escaping () -> Bool = { TextInsertionService.isTrusted },
         interval: Duration = .seconds(1)
     ) {
         self.read = read
         self.isEnabled = isEnabled
+        self.isPermitted = isPermitted
         self.interval = interval
     }
 
@@ -50,7 +55,13 @@ final class MeetingRosterRecorder {
     func start(position: @escaping @MainActor () -> TimeInterval?) {
         task?.cancel()
         roster = MeetingRoster()
+        isActive = false
         guard isEnabled() else { return }
+        guard isPermitted() else {
+            NookEventLog.write(.speakersZoomNotPermitted)
+            return
+        }
+        isActive = true
         let read = self.read
         let interval = self.interval
         task = Task { [weak self] in
@@ -71,6 +82,14 @@ final class MeetingRosterRecorder {
     func stop() -> MeetingRoster {
         task?.cancel()
         task = nil
+        if isActive {
+            NookEventLog.write(roster.participants.isEmpty && roster.selfName == nil
+                ? .speakersZoomNothingRead : .speakersZoomRead)
+            if !roster.activeSpeakers.isEmpty {
+                NookEventLog.write(.speakersZoomActiveSpeakerSeen)
+            }
+        }
+        isActive = false
         return roster
     }
 
