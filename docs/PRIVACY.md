@@ -259,7 +259,8 @@ that is when Nook asks for Accessibility access if it does not already have it.
   desktop app's meeting window: each participant's display name, whether they
   are muted, and which tile Zoom marks or enlarges as the active speaker. It
   reads no other window, no other application, no chat, and no video. When
-  Zoom is not running, nothing is read.
+  the Zoom desktop app is not running, nothing is read. Zoom in a web browser
+  is never read, so the feature does not work there.
 - **What it keeps.** The readings stay in memory until the note is saved, then
   are discarded. A voice is named only where Zoom's active speaker clearly
   matches it; several voices behind one Zoom name, such as a meeting room,
