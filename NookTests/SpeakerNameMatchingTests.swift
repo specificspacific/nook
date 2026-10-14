@@ -73,14 +73,23 @@ struct SpeakerNameMatchingTests {
         #expect(SpeakerNameMatching.names(for: [line(6, 6, "Speaker 1")], roster: marked).isEmpty)
     }
 
-    /// One name, one voice: when separation splits a person in two, the
-    /// stronger half takes the name and the other stays unnamed.
+    /// Several people behind one Zoom name, such as a meeting room, keep
+    /// that name with a number each, in the order they first spoke.
     @Test
-    func aNameIsGivenToOnlyOneVoice() {
-        let transcript = [line(0, 10, "Speaker 1"), line(10, 4, "Speaker 2")]
-        let roster = MeetingRoster(activeSpeakers: highlighted("Ana Ruiz", from: 0, to: 14))
-        let names = SpeakerNameMatching.names(for: transcript, roster: roster)
-        #expect(names == ["Speaker 1": "Ana Ruiz"])
+    func voicesSharingOneNameAreNumbered() {
+        let transcript = [
+            line(0, 6, "Unclear · voice 1"),
+            line(7, 6, "Unclear · voice 2"),
+            line(14, 6, "Unclear · voice 1"),
+            line(21, 6, "Unclear · voice 3"),
+        ]
+        let roster = MeetingRoster(
+            activeSpeakers: highlighted("Boardroom", from: 0, to: 21) + highlighted("Ana Ruiz", from: 21, to: 27)
+        )
+        let named = SpeakerNameMatching.named(transcript, roster: roster)
+        #expect(named.map(\.speaker) == [
+            "Boardroom · voice 1", "Boardroom · voice 2", "Boardroom · voice 1", "Ana Ruiz",
+        ])
     }
 
     /// A gap in readings is not stretched into a name.

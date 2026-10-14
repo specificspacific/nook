@@ -245,7 +245,7 @@ struct SettingsView: View {
             } header: {
                 Text("Transcription")
             } footer: {
-                Text("Recognition runs with Apple’s on-device speech model. You can change the language between meetings. After a meeting, Nook separates the other voices on this Mac and labels them Speaker 1, Speaker 2 until you name them. Name speakers from Zoom reads participant names and who Zoom shows as speaking from the Zoom app while you record, using Accessibility access, and names a voice when the match is clear. Names stay in the note on this Mac.")
+                Text("Recognition runs with Apple’s on-device speech model. You can change the language between meetings. After a meeting, Nook separates the other voices on this Mac and labels them Unclear · voice 1, Unclear · voice 2 until you name them. Name speakers from Zoom reads participant names and who Zoom shows as speaking from the Zoom app while you record, using Accessibility access, and names a voice when the match is clear. Names stay in the note on this Mac.")
             }
 
             audioInputCheckSection

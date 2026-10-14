@@ -26,10 +26,16 @@ struct MeetingRoster: Equatable, Sendable {
 ///
 /// The highlight and the voice separation are independent and both imperfect.
 /// The app's highlight lags speech by a moment and sticks to the last talker
-/// through silence; separation sometimes splits one person in two. So a voice
-/// is named only when one name clearly dominates the time it spoke, and a name
-/// is given to at most one voice. Everything else keeps "Speaker N" for the
-/// user to name, which is a better outcome than a confident wrong name.
+/// through silence. So a voice is named only when one name clearly dominates
+/// the time it spoke. Everything else stays "Unclear · voice N" for the user
+/// to name, which is a better outcome than a confident wrong name.
+///
+/// Several voices can clearly belong to one name: people sharing a meeting
+/// room behind one Zoom tile. Each then keeps the name with its own number,
+/// "Boardroom · voice 1", so the room's people stay apart in the transcript.
+/// Separation occasionally splits one person in two, which reads the same
+/// way; that is honest about what is known, where giving the name to only the
+/// stronger voice would leave the other looking like a stranger.
 enum SpeakerNameMatching {
     /// A reading is taken to hold until the next one, but never longer than
     /// this. Readings come about once a second, so this bridges one missed
@@ -50,9 +56,9 @@ enum SpeakerNameMatching {
     /// How far the winner must lead the runner-up.
     static let minimumLead = 2.0
 
-    /// Maps each placeholder speaker ("Speaker 1") to a name, only where the
-    /// evidence is clear. Speakers the user already named are left alone and
-    /// their names are not given to anyone else.
+    /// Maps each placeholder voice to a name, only where the evidence is
+    /// clear. Voices the user already named are left alone and their names are
+    /// not given to anyone else.
     static func names(
         for transcript: [TranscriptSegment],
         roster: MeetingRoster
@@ -73,8 +79,6 @@ enum SpeakerNameMatching {
             }
         }
 
-        // Strongest clear match first, one voice per name. A name that could
-        // describe two voices goes to the one it describes best.
         var candidates: [(speaker: String, name: String, seconds: TimeInterval)] = []
         for (speaker, tally) in votes {
             let ranked = tally.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
@@ -86,14 +90,22 @@ enum SpeakerNameMatching {
                   best.value >= runnerUp * minimumLead else { continue }
             candidates.append((speaker, best.key, best.value))
         }
-        candidates.sort { $0.seconds != $1.seconds ? $0.seconds > $1.seconds : $0.speaker < $1.speaker }
 
+        // Voices sharing a name are numbered in the order they first spoke,
+        // which is the order of their placeholders.
+        let order = SpeakerNames.speakers(in: transcript)
         var result: [String: String] = [:]
-        var used: Set<String> = []
-        for candidate in candidates where result[candidate.speaker] == nil {
-            guard let name = SpeakerNames.sanitized(candidate.name), !used.contains(name) else { continue }
-            result[candidate.speaker] = name
-            used.insert(name)
+        for name in Set(candidates.map(\.name)) {
+            guard let clean = SpeakerNames.sanitized(name) else { continue }
+            let voices = candidates.filter { $0.name == name }.map(\.speaker)
+                .sorted { (order.firstIndex(of: $0) ?? .max) < (order.firstIndex(of: $1) ?? .max) }
+            if voices.count == 1 {
+                result[voices[0]] = clean
+            } else {
+                for (index, voice) in voices.enumerated() {
+                    result[voice] = SpeakerNames.sharedName(clean, voice: index)
+                }
+            }
         }
         return result
     }

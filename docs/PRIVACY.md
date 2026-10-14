@@ -226,7 +226,7 @@ chooses.
 ## Speaker separation
 
 After a new meeting is transcribed, Nook finds who spoke when on the meeting
-side and labels those passages *Speaker 1*, *Speaker 2*, and so on, until the
+side and labels those passages *Unclear · voice 1*, *Unclear · voice 2*, and so on, until the
 user names them in the transcript. Names are written into the note's Markdown
 and nowhere else. Settings, Listening, *Tell speakers apart* turns this off.
 
@@ -262,8 +262,10 @@ that is when Nook asks for Accessibility access if it does not already have it.
   Zoom is not running, nothing is read.
 - **What it keeps.** The readings stay in memory until the note is saved, then
   are discarded. A voice is named only where Zoom's active speaker clearly
-  matches one separated voice; the user's own name is never given to another
-  voice. The note keeps the names beside transcript lines and a
+  matches it; several voices behind one Zoom name, such as a meeting room,
+  are numbered under that name. The user's own name is never given to
+  another voice. No voiceprint is kept, so people in a room are told apart
+  within one meeting but never recognised in another. The note keeps the names beside transcript lines and a
   `participants:` list in its frontmatter, offered when the user names a
   speaker. Nothing else is written.
 - **Calendar.** When calendar context is on, the invitees of the event the
