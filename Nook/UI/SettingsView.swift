@@ -41,6 +41,7 @@ struct SettingsView: View {
     @State private var showingRestoreAllDefaultsConfirmation = false
     @AppStorage(NotchPeekPreference.key) private var notchPeekEnabled = true
     @AppStorage(SpeakerSeparationPreference.key) private var separateSpeakers = true
+    @AppStorage(ZoomSpeakerNamesPreference.key) private var nameSpeakersFromZoom = false
     @AppStorage(SpotlightIndexPreference.key) private var spotlightEnabled = true
     @AppStorage(AutoFilingPreference.key) private var fileRecurringMeetings = true
     /// Nil until the bundle's signature has been read, which happens off the
@@ -213,10 +214,19 @@ struct SettingsView: View {
                     }
                 }
                 Toggle("Tell speakers apart", isOn: $separateSpeakers)
+                Toggle("Name speakers from Zoom", isOn: $nameSpeakersFromZoom)
+                    .disabled(!separateSpeakers)
+                    .onChange(of: nameSpeakersFromZoom) { _, enabled in
+                        // Asked for at the moment it is needed, as dictation
+                        // does, never on Nook's own initiative.
+                        if enabled, !TextInsertionService.isTrusted {
+                            TextInsertionService.requestTrust()
+                        }
+                    }
             } header: {
                 Text("Transcription")
             } footer: {
-                Text("Recognition runs with Apple’s on-device speech model. You can change the language between meetings. After a meeting, Nook separates the other voices on this Mac and labels them Speaker 1, Speaker 2 until you name them.")
+                Text("Recognition runs with Apple’s on-device speech model. You can change the language between meetings. After a meeting, Nook separates the other voices on this Mac and labels them Speaker 1, Speaker 2 until you name them. Name speakers from Zoom reads participant names and who Zoom shows as speaking from the Zoom app while you record, using Accessibility access, and names a voice when the match is clear. Names stay in the note on this Mac.")
             }
 
             audioInputCheckSection
