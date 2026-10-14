@@ -35,8 +35,14 @@ enum SpeakerNameMatching {
     /// this. Readings come about once a second, so this bridges one missed
     /// read. A longer gap means the app could not be read (window hidden,
     /// panel changed), and stretching the last name across it would be a
-    /// guess. It stays below `minimumEvidence`, so one reading names nobody.
-    static let maximumHold: TimeInterval = 2.5
+    /// guess.
+    static let maximumHold: TimeInterval = 2
+    /// Zoom marks a speaker about a second after they start talking: in a
+    /// live trace on Zoom 7.1 the marker followed an unmute by 1.2 seconds.
+    /// Each reading is therefore taken to begin this much earlier. Together
+    /// with `maximumHold` it stays below `minimumEvidence`, so one stray
+    /// reading names nobody.
+    static let highlightLag: TimeInterval = 0.75
     /// Overlap below this is coincidence, not evidence.
     static let minimumEvidence: TimeInterval = 3
     /// The winning name's share of all highlighted time across the voice.
@@ -146,10 +152,17 @@ enum SpeakerNameMatching {
             guard end > reading.time else { continue }
             if let last = spans.last, last.name == reading.name, last.end >= reading.time {
                 spans[spans.count - 1] = Span(start: last.start, end: end, name: last.name)
-            } else {
-                spans.append(Span(start: reading.time, end: end, name: reading.name))
+                continue
             }
+            // A new name began about `highlightLag` before Zoom showed it, so
+            // the previous span gives up that stretch.
+            let start = max(0, reading.time - highlightLag, spans.last?.start ?? 0)
+            if let last = spans.last, last.end > start {
+                spans[spans.count - 1] = Span(start: last.start, end: start, name: last.name)
+            }
+            spans.append(Span(start: start, end: end, name: reading.name))
         }
+        spans.removeAll { $0.end <= $0.start }
         return spans
     }
 

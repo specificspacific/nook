@@ -178,4 +178,13 @@ struct SpeakerNameMatchingTests {
         )
         #expect(names == ["Ana Ruiz"])
     }
+
+    /// Zoom marks a speaker about a second late (measured on Zoom 7.1), so a
+    /// turn whose start Zoom missed is still credited to them.
+    @Test
+    func zoomsLateMarkerStillCountsTheStartOfATurn() {
+        let transcript = [line(10, 3.5, "Speaker 1")]
+        let roster = MeetingRoster(activeSpeakers: highlighted("Ana Ruiz", from: 11, to: 14))
+        #expect(SpeakerNameMatching.names(for: transcript, roster: roster) == ["Speaker 1": "Ana Ruiz"])
+    }
 }
