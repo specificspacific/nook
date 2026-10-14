@@ -141,4 +141,52 @@ struct ZoomRosterReaderTests {
         // The early "Jo Kay" reading stays, but matching excludes it by name.
         #expect(roster.activeSpeakers.map(\.name) == ["Jo Kay", "Ana Ruiz"])
     }
+
+    /// With the participants panel closed, the user is found as the one tile
+    /// whose mute state always matched their own mute button, as in a live
+    /// Zoom 7.1 trace. Readings without the toolbar say nothing either way.
+    @MainActor
+    @Test
+    func theUserIsFoundByTheirOwnMuteButton() {
+        func reading(userUnmuted: Bool?) -> AccessibilitySnapshotNode {
+            var children = [
+                tile("Ana Ruiz, Computer audio unmuted, Video off", 160, 90),
+                tile("Jo Kay, Computer audio muted, Video off", 160, 90),
+                tile("Ben Ode, Computer audio muted, Video off", 160, 90),
+            ]
+            if let userUnmuted {
+                children.append(AccessibilitySnapshotNode(
+                    role: "AXButton",
+                    description: userUnmuted ? "Mute my audio" : "Unmute my audio",
+                    identifier: "audio"
+                ))
+            }
+            return AccessibilitySnapshotNode(role: "AXWindow", children: children)
+        }
+        let first = ZoomRosterParser.reading(from: reading(userUnmuted: false))
+        #expect(first.selfCandidates == ["Jo Kay", "Ben Ode"])
+        #expect(ZoomRosterParser.reading(from: reading(userUnmuted: nil)).selfCandidates == nil)
+
+        let recorder = MeetingRosterRecorder(read: { nil }, isEnabled: { false })
+        recorder.record(first, at: 1)
+        // Ben unmutes while the user stays muted, which tells them apart.
+        var later = first
+        later.selfCandidates = ["Jo Kay"]
+        recorder.record(later, at: 2)
+        recorder.record(ZoomRosterParser.reading(from: reading(userUnmuted: nil)), at: 3)
+        let roster = recorder.stop()
+        #expect(roster.selfName == "Jo Kay")
+        #expect(!roster.participants.contains("Jo Kay"))
+    }
+
+    /// While nobody's mute state has told the user apart, nobody is assumed.
+    @MainActor
+    @Test
+    func anUnresolvedMuteStateAssumesNobody() {
+        let recorder = MeetingRosterRecorder(read: { nil }, isEnabled: { false })
+        recorder.record(ZoomMeetingReading(participants: ["Jo Kay", "Ben Ode"], selfCandidates: ["Jo Kay", "Ben Ode"]), at: 1)
+        let roster = recorder.stop()
+        #expect(roster.selfName == nil)
+        #expect(roster.participants == ["Jo Kay", "Ben Ode"])
+    }
 }

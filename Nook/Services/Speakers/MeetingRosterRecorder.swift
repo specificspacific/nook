@@ -33,6 +33,9 @@ final class MeetingRosterRecorder {
     private let interval: Duration
     /// Whether this recording read Zoom at all. Kept for the event log.
     private(set) var isActive = false
+    /// Names whose tile agreed with the user's own mute button at every
+    /// reading so far. Nil until the toolbar has been seen.
+    private var selfCandidates: Set<String>?
 
     init(
         read: @escaping @Sendable () -> ZoomMeetingReading? = { ZoomAccessibilityReader.readMeeting() },
@@ -56,6 +59,7 @@ final class MeetingRosterRecorder {
         task?.cancel()
         roster = MeetingRoster()
         isActive = false
+        selfCandidates = nil
         guard isEnabled() else { return }
         guard isPermitted() else {
             NookEventLog.write(.speakersZoomNotPermitted)
@@ -82,6 +86,7 @@ final class MeetingRosterRecorder {
     func stop() -> MeetingRoster {
         task?.cancel()
         task = nil
+        resolveSelfFromMuteState()
         if isActive {
             NookEventLog.write(roster.participants.isEmpty && roster.selfName == nil
                 ? .speakersZoomNothingRead : .speakersZoomRead)
@@ -98,9 +103,24 @@ final class MeetingRosterRecorder {
         task?.cancel()
         task = nil
         roster = MeetingRoster()
+        selfCandidates = nil
+    }
+
+    /// Zoom only marks the user "(me)" while its participants panel is open.
+    /// Otherwise the user is the one participant whose mute state matched
+    /// their own mute button every time it was read. Two or more left means
+    /// nobody's state ever told them apart, and nothing is assumed.
+    private func resolveSelfFromMuteState() {
+        guard roster.selfName == nil, let candidates = selfCandidates,
+              candidates.count == 1, let name = candidates.first else { return }
+        roster.selfName = name
+        roster.participants.removeAll { $0 == name }
     }
 
     func record(_ reading: ZoomMeetingReading, at time: TimeInterval) {
+        if let candidates = reading.selfCandidates, !candidates.isEmpty {
+            selfCandidates = selfCandidates.map { $0.intersection(candidates) } ?? candidates
+        }
         if let selfName = reading.selfName {
             roster.selfName = selfName
             roster.participants.removeAll { $0 == selfName }

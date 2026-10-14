@@ -22,6 +22,10 @@ struct ZoomMeetingReading: Equatable, Sendable {
     var selfName: String?
     /// Who Zoom presented as talking, when it can be told.
     var activeSpeaker: String?
+    /// Tiles whose mute state matched the user's own mute button at this
+    /// moment, or nil when the toolbar was hidden. The user is the one tile
+    /// that matches at every reading; see `MeetingRosterRecorder`.
+    var selfCandidates: Set<String>?
 }
 
 /// Reads participant names and the active speaker from the Zoom desktop
@@ -39,6 +43,9 @@ struct ZoomMeetingReading: Equatable, Sendable {
 ///   "Jo Kay (me)".
 /// - With three or more people, the talking person's tile gains a trailing
 ///   "active speaker" field. That is the signal relied on.
+/// - The toolbar's microphone button (identifier "audio") reads "Mute my
+///   audio" or "Unmute my audio": the user's own state, visible only while
+///   the toolbar is shown. Without the panel nothing else marks the user.
 /// - With two, Zoom marks nobody. In Speaker View it still gives the other
 ///   person the one large tile, so that is the next signal, and beyond it the
 ///   only evidence is that exactly one other person is unmuted.
@@ -54,7 +61,8 @@ enum ZoomRosterParser {
     static func reading(from window: AccessibilitySnapshotNode) -> ZoomMeetingReading {
         var tiles: [Tile] = []
         var rows: [(name: String, isSelf: Bool, unmuted: Bool?)] = []
-        collect(window, tiles: &tiles, rows: &rows, inParticipantList: false)
+        var userUnmuted: Bool?
+        collect(window, tiles: &tiles, rows: &rows, userUnmuted: &userUnmuted, inParticipantList: false)
 
         let selfName = rows.first(where: \.isSelf)?.name
         var participants: [String] = []
@@ -66,7 +74,10 @@ enum ZoomRosterParser {
         return ZoomMeetingReading(
             participants: participants,
             selfName: selfName,
-            activeSpeaker: activeSpeaker(tiles: tiles, rows: rows, selfName: selfName)
+            activeSpeaker: activeSpeaker(tiles: tiles, rows: rows, selfName: selfName),
+            selfCandidates: userUnmuted.map { state in
+                Set(tiles.filter { $0.unmuted == state }.map(\.name))
+            }
         )
     }
 
@@ -109,8 +120,16 @@ enum ZoomRosterParser {
         _ node: AccessibilitySnapshotNode,
         tiles: inout [Tile],
         rows: inout [(name: String, isSelf: Bool, unmuted: Bool?)],
+        userUnmuted: inout Bool?,
         inParticipantList: Bool
     ) {
+        if userUnmuted == nil, node.identifier == "audio", let description = node.description {
+            switch description.lowercased() {
+            case "mute my audio": userUnmuted = true
+            case "unmute my audio": userUnmuted = false
+            default: break
+            }
+        }
         if node.role == "AXTabGroup", let description = node.description,
            let tile = tile(from: description) {
             tiles.append(Tile(
@@ -125,7 +144,10 @@ enum ZoomRosterParser {
         }
         let entersList = node.role == "AXOutline" && node.description == "Participants list"
         for child in node.children {
-            collect(child, tiles: &tiles, rows: &rows, inParticipantList: inParticipantList || entersList)
+            collect(
+                child, tiles: &tiles, rows: &rows, userUnmuted: &userUnmuted,
+                inParticipantList: inParticipantList || entersList
+            )
         }
     }
 
