@@ -9,18 +9,6 @@ release collects them.
 
 ## Unreleased
 
-- Nook can name the people in a Zoom call. With *Name speakers from Zoom* on in
-  Settings, it reads participant names and Zoom's active speaker while it
-  records, and puts a name to a voice when the match is clear. This works
-  with the Zoom desktop app only, not Zoom in a web browser. Naming a voice
-  by hand now offers the people from the call, or the calendar invitees, with
-  one click.
-- Several people sharing one Zoom name, such as a meeting room, are kept apart
-  as *Boardroom · voice 1*, *Boardroom · voice 2*.
-- Voices Nook cannot identify are labelled *Unclear · voice 1* instead of
-  *Speaker 1*, which read like one more person in the meeting. Older notes
-  are unchanged.
-
 ## 1.23.1
 
 [Release notes](Releases/Nook-1.23.1.md)
