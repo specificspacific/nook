@@ -237,9 +237,9 @@ final class MeetingCoordinator: ObservableObject {
     /// opening those resources during the same turn of the main actor.
     private let prepareForAudioCapture: (@MainActor () async throws -> Void)?
     private let capture = CaptureService()
-    /// Global flag hotkey, registered only while a recording is running.
     /// Who the meeting app showed during the recording, for naming voices.
     private let rosterRecorder = MeetingRosterRecorder()
+    /// Global flag hotkey, registered only while a recording is running.
     private let momentHotKeys = MomentHotKeyController(
         shortcut: ShortcutStore.shared.binding(for: .flagMoment)
     )
@@ -1156,10 +1156,6 @@ final class MeetingCoordinator: ObservableObject {
         generation == currentGeneration
     }
 
-    /// Builds the note that must be useful before the on-device model gets a
-    /// turn. The deterministic fallback is deliberately written first, so a
-    /// model refusal or a timeout never leaves the transcript stranded in a
-    /// temporary processing state.
     /// Names worth offering for a note's speakers, the user's own excluded.
     static func participantNames(
         roster: MeetingRoster,
@@ -1177,6 +1173,10 @@ final class MeetingCoordinator: ObservableObject {
         return names
     }
 
+    /// Builds the note that must be useful before the on-device model gets a
+    /// turn. The deterministic fallback is deliberately written first, so a
+    /// model refusal or a timeout never leaves the transcript stranded in a
+    /// temporary processing state.
     static func transcriptFirstScaffold(
         for draft: MeetingDraft,
         transcript: [TranscriptSegment],
