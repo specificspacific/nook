@@ -84,6 +84,9 @@ final class DockPresenceController {
                 self?.reconcile(closing: window)
             }
         })
+        // A window macOS restored at launch may already be open, and becomes
+        // key before these observers exist.
+        reconcile()
     }
 
     func reconcile(closing: NSWindow? = nil) {
