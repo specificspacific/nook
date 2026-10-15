@@ -4,6 +4,9 @@ Nook follows a user-facing release-note model. Each published version has a
 Markdown note in [`Releases/`](Releases/) and a matching `v<version>` release in
 the [binary releases repository](https://github.com/wrnsnng/nook-releases/releases).
 
+Unreleased changes live in [`.changeset/`](.changeset/) until the next
+release collects them.
+
 ## Unreleased
 
 - Nook can name the people in a Zoom call. With *Name speakers from Zoom* on in
